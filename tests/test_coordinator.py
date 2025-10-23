@@ -5,21 +5,18 @@ from __future__ import annotations
 from unittest.mock import AsyncMock, patch
 
 import pytest
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers.update_coordinator import UpdateFailed
 
 from custom_components.fireboard.coordinator import FireBoardDataUpdateCoordinator
-
-pytestmark = pytest.mark.usefixtures("auto_enable_custom_integrations")
 
 
 async def test_coordinator_update_success(
     hass, mock_config_entry_data, mock_device_data, mock_temperature_data
 ):
     """Test successful coordinator update."""
-    from pytest_homeassistant_custom_component.common import MockConfigEntry
-
-    config_entry = MockConfigEntry(
+    config_entry = ConfigEntry(
         domain="fireboard",
         title="Test",
         data=mock_config_entry_data,
@@ -49,9 +46,7 @@ async def test_coordinator_update_success(
 
 async def test_coordinator_authentication(hass, mock_config_entry_data):
     """Test coordinator authenticates when token is missing."""
-    from pytest_homeassistant_custom_component.common import MockConfigEntry
-
-    config_entry = MockConfigEntry(
+    config_entry = ConfigEntry(
         domain="fireboard",
         title="Test",
         data=mock_config_entry_data,
@@ -143,9 +138,7 @@ async def test_coordinator_device_offline(
     hass, mock_config_entry_data, mock_device_data, mock_temperature_data
 ):
     """Test coordinator marks device offline on temperature fetch error."""
-    from pytest_homeassistant_custom_component.common import MockConfigEntry
-
-    config_entry = MockConfigEntry(
+    config_entry = ConfigEntry(
         domain="fireboard",
         title="Test",
         data=mock_config_entry_data,

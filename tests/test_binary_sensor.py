@@ -5,11 +5,9 @@ from __future__ import annotations
 from unittest.mock import AsyncMock, patch
 
 import pytest
-from pytest_homeassistant_custom_component.common import MockConfigEntry
+from homeassistant.config_entries import ConfigEntry
 
 from custom_components.fireboard.const import DOMAIN
-
-pytestmark = pytest.mark.usefixtures("auto_enable_custom_integrations")
 
 
 async def test_connectivity_sensor(hass, mock_coordinator_data, mock_config_entry_data):
@@ -17,7 +15,7 @@ async def test_connectivity_sensor(hass, mock_coordinator_data, mock_config_entr
     from custom_components.fireboard.binary_sensor import FireBoardConnectivitySensor
     from custom_components.fireboard.coordinator import FireBoardDataUpdateCoordinator
 
-    config_entry = MockConfigEntry(
+    config_entry = ConfigEntry(
         domain=DOMAIN,
         title="Test",
         data=mock_config_entry_data,
@@ -46,7 +44,7 @@ async def test_connectivity_sensor_offline(
     from custom_components.fireboard.binary_sensor import FireBoardConnectivitySensor
     from custom_components.fireboard.coordinator import FireBoardDataUpdateCoordinator
 
-    config_entry = MockConfigEntry(
+    config_entry = ConfigEntry(
         domain=DOMAIN,
         title="Test",
         data=mock_config_entry_data,
@@ -76,7 +74,7 @@ async def test_battery_low_sensor(hass, mock_coordinator_data, mock_config_entry
     from custom_components.fireboard.binary_sensor import FireBoardBatteryLowSensor
     from custom_components.fireboard.coordinator import FireBoardDataUpdateCoordinator
 
-    config_entry = MockConfigEntry(
+    config_entry = ConfigEntry(
         domain=DOMAIN,
         title="Test",
         data=mock_config_entry_data,
@@ -105,7 +103,7 @@ async def test_battery_low_sensor_low_battery(
     from custom_components.fireboard.binary_sensor import FireBoardBatteryLowSensor
     from custom_components.fireboard.coordinator import FireBoardDataUpdateCoordinator
 
-    config_entry = MockConfigEntry(
+    config_entry = ConfigEntry(
         domain=DOMAIN,
         title="Test",
         data=mock_config_entry_data,
