@@ -44,4 +44,3 @@ ATTR_BATTERY_LOW: Final = "battery_low"
 # Connection status
 ATTR_ONLINE: Final = "online"
 ATTR_LAST_SEEN: Final = "last_seen"
-

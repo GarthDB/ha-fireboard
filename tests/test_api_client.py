@@ -24,7 +24,7 @@ async def test_authenticate_success():
     response.status = 200
     response.json = AsyncMock(return_value={"key": "test-token-12345"})
     response.raise_for_status = MagicMock()
-    
+
     session.post = AsyncMock(return_value=response)
     session.cookie_jar = MagicMock()
 
@@ -43,7 +43,7 @@ async def test_authenticate_invalid_credentials():
     session = MagicMock(spec=aiohttp.ClientSession)
     response = MagicMock()
     response.status = 401
-    
+
     session.post = AsyncMock(return_value=response)
 
     client = FireBoardApiClient("test@example.com", "wrong_password", session)
@@ -57,7 +57,7 @@ async def test_authenticate_rate_limit():
     session = MagicMock(spec=aiohttp.ClientSession)
     response = MagicMock()
     response.status = 429
-    
+
     session.post = AsyncMock(return_value=response)
 
     client = FireBoardApiClient("test@example.com", "password", session)
@@ -70,27 +70,27 @@ async def test_authenticate_rate_limit():
 async def test_get_devices():
     """Test getting devices."""
     session = MagicMock(spec=aiohttp.ClientSession)
-    
+
     # Mock authentication
     auth_response = MagicMock()
     auth_response.status = 200
     auth_response.json = AsyncMock(return_value={"key": "test-token"})
     auth_response.raise_for_status = MagicMock()
-    
+
     session.post = AsyncMock(return_value=auth_response)
     session.cookie_jar = MagicMock()
-    
+
     # Mock get devices
     devices_response = MagicMock()
     devices_response.status = 200
     devices_response.json = AsyncMock(return_value=[{"uuid": "device-1"}])
     devices_response.raise_for_status = MagicMock()
-    
+
     session.request = AsyncMock(return_value=devices_response)
 
     client = FireBoardApiClient("test@example.com", "password", session)
     await client.authenticate()
-    
+
     devices = await client.get_devices()
 
     assert len(devices) == 1
@@ -111,31 +111,31 @@ async def test_request_without_authentication():
 async def test_token_refresh_on_401():
     """Test automatic token refresh when receiving 401."""
     session = MagicMock(spec=aiohttp.ClientSession)
-    
+
     # Mock initial authentication
     auth_response = MagicMock()
     auth_response.status = 200
     auth_response.json = AsyncMock(return_value={"key": "test-token"})
     auth_response.raise_for_status = MagicMock()
-    
+
     session.post = AsyncMock(return_value=auth_response)
     session.cookie_jar = MagicMock()
-    
+
     # First request returns 401, second succeeds
     expired_response = MagicMock()
     expired_response.status = 401
     expired_response.raise_for_status = MagicMock()
-    
+
     success_response = MagicMock()
     success_response.status = 200
     success_response.json = AsyncMock(return_value=[])
     success_response.raise_for_status = MagicMock()
-    
+
     session.request = AsyncMock(side_effect=[expired_response, success_response])
 
     client = FireBoardApiClient("test@example.com", "password", session)
     await client.authenticate()
-    
+
     # This should trigger re-authentication
     devices = await client.get_devices()
 

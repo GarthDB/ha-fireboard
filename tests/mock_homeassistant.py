@@ -314,4 +314,3 @@ homeassistant = MockModule(
 
 # Mock external dependencies
 voluptuous = MockVoluptuous()
-

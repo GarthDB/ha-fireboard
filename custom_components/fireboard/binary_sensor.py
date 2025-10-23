@@ -124,4 +124,3 @@ class FireBoardBatteryLowSensor(FireBoardEntity, BinarySensorEntity):
                 return False
 
         return False
-

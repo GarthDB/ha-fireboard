@@ -55,7 +55,9 @@ async def hass() -> HomeAssistant:
     hass_instance = HomeAssistant("")
     hass_instance.config_entries = MagicMock()
     hass_instance.config_entries.async_unload_platforms = AsyncMock(return_value=True)
-    hass_instance.config_entries.async_forward_entry_setups = AsyncMock(return_value=None)
+    hass_instance.config_entries.async_forward_entry_setups = AsyncMock(
+        return_value=None
+    )
     hass_instance.entity_registry = MagicMock()
     hass_instance.device_registry = MagicMock()
 

@@ -33,7 +33,7 @@ async def test_coordinator_update_success(
         mock_client_class.return_value = mock_client
 
         coordinator = FireBoardDataUpdateCoordinator(hass, config_entry)
-        
+
         # Manually set the client to our mock
         coordinator.client = mock_client
 
@@ -161,4 +161,3 @@ async def test_coordinator_device_offline(
         # Device should be marked offline but still in data
         assert mock_device_data["uuid"] in coordinator.data
         assert coordinator.data[mock_device_data["uuid"]]["online"] is False
-

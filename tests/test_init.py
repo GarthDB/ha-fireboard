@@ -17,7 +17,7 @@ async def test_setup_entry(hass, mock_config_entry_data, mock_coordinator_data):
         title="Test",
         data=mock_config_entry_data,
     )
-    
+
     with patch(
         "custom_components.fireboard.coordinator.FireBoardApiClient"
     ) as mock_client_class:
@@ -26,7 +26,7 @@ async def test_setup_entry(hass, mock_config_entry_data, mock_coordinator_data):
         mock_client.get_devices = AsyncMock(return_value=[])
         mock_client.auth_token = "test-token"
         mock_client_class.return_value = mock_client
-        
+
         with patch(
             "custom_components.fireboard.mqtt_client.FireBoardMQTTClient"
         ) as mock_mqtt:
@@ -74,4 +74,3 @@ async def test_unload_entry(hass, mock_config_entry_data, mock_coordinator_data)
 
             assert result is True
             assert config_entry.entry_id not in hass.data[DOMAIN]
-

@@ -182,4 +182,3 @@ class FireBoardBatterySensor(FireBoardEntity, SensorEntity):
                 return None
 
         return None
-

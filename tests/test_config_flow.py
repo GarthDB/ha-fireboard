@@ -103,7 +103,9 @@ async def test_user_rate_limit(hass, mock_config_entry_data):
     with patch(
         "custom_components.fireboard.config_flow.FireBoardApiClient"
     ) as mock_client:
-        from custom_components.fireboard.api_client import FireBoardApiClientRateLimitError
+        from custom_components.fireboard.api_client import (
+            FireBoardApiClientRateLimitError,
+        )
 
         mock_instance = AsyncMock()
         mock_instance.authenticate = AsyncMock(
@@ -131,7 +133,9 @@ async def test_user_already_configured(hass, mock_config_entry_data):
         unique_id=mock_config_entry_data[CONF_EMAIL].lower(),
     )
     # Mock that the entry exists
-    hass.config_entries.async_entries = lambda domain: [entry] if domain == DOMAIN else []
+    hass.config_entries.async_entries = lambda domain: (
+        [entry] if domain == DOMAIN else []
+    )
 
     with patch(
         "custom_components.fireboard.config_flow.FireBoardApiClient"
@@ -149,4 +153,3 @@ async def test_user_already_configured(hass, mock_config_entry_data):
 
         assert result["type"] == FlowResultType.ABORT
         assert result["reason"] == "already_configured"
-

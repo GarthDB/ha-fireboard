@@ -21,9 +21,7 @@ async def test_connectivity_sensor(hass, mock_coordinator_data, mock_config_entr
         data=mock_config_entry_data,
     )
 
-    with patch(
-        "custom_components.fireboard.coordinator.FireBoardApiClient"
-    ):
+    with patch("custom_components.fireboard.coordinator.FireBoardApiClient"):
         coordinator = FireBoardDataUpdateCoordinator(hass, config_entry)
         coordinator.data = mock_coordinator_data
         coordinator.last_update_success = True
@@ -53,9 +51,7 @@ async def test_connectivity_sensor_offline(
     # Mark device as offline
     mock_coordinator_data["test-device-uuid-123"]["online"] = False
 
-    with patch(
-        "custom_components.fireboard.coordinator.FireBoardApiClient"
-    ):
+    with patch("custom_components.fireboard.coordinator.FireBoardApiClient"):
         coordinator = FireBoardDataUpdateCoordinator(hass, config_entry)
         coordinator.data = mock_coordinator_data
         coordinator.last_update_success = True
@@ -80,9 +76,7 @@ async def test_battery_low_sensor(hass, mock_coordinator_data, mock_config_entry
         data=mock_config_entry_data,
     )
 
-    with patch(
-        "custom_components.fireboard.coordinator.FireBoardApiClient"
-    ):
+    with patch("custom_components.fireboard.coordinator.FireBoardApiClient"):
         coordinator = FireBoardDataUpdateCoordinator(hass, config_entry)
         coordinator.data = mock_coordinator_data
         coordinator.last_update_success = True
@@ -112,9 +106,7 @@ async def test_battery_low_sensor_low_battery(
     # Set battery to low level
     mock_coordinator_data["test-device-uuid-123"]["device_info"]["battery_level"] = 15
 
-    with patch(
-        "custom_components.fireboard.coordinator.FireBoardApiClient"
-    ):
+    with patch("custom_components.fireboard.coordinator.FireBoardApiClient"):
         coordinator = FireBoardDataUpdateCoordinator(hass, config_entry)
         coordinator.data = mock_coordinator_data
         coordinator.last_update_success = True
@@ -126,4 +118,3 @@ async def test_battery_low_sensor_low_battery(
 
         # Battery at 15% should be low
         assert sensor.is_on is True
-
