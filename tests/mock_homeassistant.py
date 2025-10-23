@@ -298,6 +298,9 @@ homeassistant = MockModule(
             UpdateFailed=UpdateFailed,
             CoordinatorEntity=CoordinatorEntity,
         ),
+        aiohttp_client=MockModule(
+            async_get_clientsession=lambda hass: MagicMock(),
+        ),
     ),
     components=MockModule(
         binary_sensor=MockModule(

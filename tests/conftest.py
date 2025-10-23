@@ -26,6 +26,9 @@ except ImportError:
     sys.modules["homeassistant.helpers.update_coordinator"] = (
         homeassistant.helpers.update_coordinator
     )
+    sys.modules["homeassistant.helpers.aiohttp_client"] = (
+        homeassistant.helpers.aiohttp_client
+    )
     sys.modules["homeassistant.components.binary_sensor"] = (
         homeassistant.components.binary_sensor
     )
