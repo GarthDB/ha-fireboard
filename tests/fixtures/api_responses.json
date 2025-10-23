@@ -1,0 +1,60 @@
+{
+  "login_success": {
+    "auth_token": "test-auth-token-12345",
+    "user": {
+      "email": "test@example.com",
+      "id": 123
+    }
+  },
+  "devices": [
+    {
+      "uuid": "device-uuid-1",
+      "title": "Backyard Smoker",
+      "hardware_id": "FireBoard 2 Pro",
+      "model": "FB2",
+      "software_version": "2.1.0",
+      "has_battery": false,
+      "battery_level": null
+    },
+    {
+      "uuid": "device-uuid-2",
+      "title": "FireBoard Spark",
+      "hardware_id": "Spark",
+      "model": "FBS",
+      "software_version": "1.5.0",
+      "has_battery": true,
+      "battery_level": 92
+    }
+  ],
+  "temperatures": {
+    "channels": [
+      {
+        "channel": 1,
+        "label": "Grill Temp",
+        "current_temp": 250.0,
+        "target_temp": 250.0
+      },
+      {
+        "channel": 2,
+        "label": "Brisket",
+        "current_temp": 195.5,
+        "target_temp": 203.0
+      },
+      {
+        "channel": 3,
+        "label": "Probe 3",
+        "current_temp": null,
+        "target_temp": null
+      }
+    ]
+  },
+  "sessions": [
+    {
+      "id": "session-123",
+      "title": "Brisket Cook",
+      "start_time": "2024-01-15T08:00:00Z",
+      "end_time": null
+    }
+  ]
+}
+

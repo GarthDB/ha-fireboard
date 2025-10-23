@@ -1,0 +1,18 @@
+{
+  "domain": "fireboard",
+  "name": "FireBoard",
+  "codeowners": [
+    "@GarthDB"
+  ],
+  "config_flow": true,
+  "dependencies": [],
+  "documentation": "https://github.com/GarthDB/ha-fireboard",
+  "integration_type": "hub",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/GarthDB/ha-fireboard/issues",
+  "requirements": [
+    "aiohttp>=3.8.0"
+  ],
+  "version": "0.1.0"
+}
+

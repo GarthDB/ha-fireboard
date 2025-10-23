@@ -1,0 +1,25 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Set up FireBoard",
+        "description": "Enter your FireBoard account credentials.",
+        "data": {
+          "email": "Email",
+          "password": "Password",
+          "polling_interval": "Polling Interval (seconds)"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Failed to connect to FireBoard API",
+      "invalid_auth": "Invalid email or password",
+      "rate_limit": "Rate limit exceeded. Please try again later.",
+      "unknown": "Unexpected error occurred"
+    },
+    "abort": {
+      "already_configured": "This FireBoard account is already configured"
+    }
+  }
+}
+
