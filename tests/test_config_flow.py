@@ -6,6 +6,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 from homeassistant import config_entries
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_EMAIL, CONF_PASSWORD
 from homeassistant.data_entry_flow import FlowResultType
 
@@ -15,8 +16,6 @@ from custom_components.fireboard.config_flow import (
     RateLimitExceeded,
 )
 from custom_components.fireboard.const import CONF_POLLING_INTERVAL, DOMAIN
-
-pytestmark = pytest.mark.usefixtures("auto_enable_custom_integrations")
 
 
 async def test_form(hass):
@@ -104,7 +103,9 @@ async def test_user_rate_limit(hass, mock_config_entry_data):
     with patch(
         "custom_components.fireboard.config_flow.FireBoardApiClient"
     ) as mock_client:
-        from custom_components.fireboard.api_client import FireBoardApiClientRateLimitError
+        from custom_components.fireboard.api_client import (
+            FireBoardApiClientRateLimitError,
+        )
 
         mock_instance = AsyncMock()
         mock_instance.authenticate = AsyncMock(
@@ -124,16 +125,17 @@ async def test_user_rate_limit(hass, mock_config_entry_data):
 
 async def test_user_already_configured(hass, mock_config_entry_data):
     """Test we handle already configured."""
-    from pytest_homeassistant_custom_component.common import MockConfigEntry
-    
     # Create an existing entry
-    entry = MockConfigEntry(
+    entry = ConfigEntry(
         domain=DOMAIN,
         title=f"FireBoard ({mock_config_entry_data[CONF_EMAIL]})",
         data=mock_config_entry_data,
         unique_id=mock_config_entry_data[CONF_EMAIL].lower(),
     )
-    entry.add_to_hass(hass)
+    # Mock that the entry exists
+    hass.config_entries.async_entries = lambda domain: (
+        [entry] if domain == DOMAIN else []
+    )
 
     with patch(
         "custom_components.fireboard.config_flow.FireBoardApiClient"
@@ -151,4 +153,3 @@ async def test_user_already_configured(hass, mock_config_entry_data):
 
         assert result["type"] == FlowResultType.ABORT
         assert result["reason"] == "already_configured"
-

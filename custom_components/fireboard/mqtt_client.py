@@ -171,9 +171,7 @@ class FireBoardMQTTClient:
             else:
                 _LOGGER.error("Failed to subscribe to device %s", device_uuid)
         else:
-            _LOGGER.debug(
-                "Device %s will be subscribed on connection", device_uuid
-            )
+            _LOGGER.debug("Device %s will be subscribed on connection", device_uuid)
 
     def unsubscribe_device(self, device_uuid: str) -> None:
         """Unsubscribe from a device's updates.
@@ -196,4 +194,3 @@ class FireBoardMQTTClient:
     def is_connected(self) -> bool:
         """Return True if connected to MQTT broker."""
         return self._connected
-

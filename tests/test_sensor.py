@@ -5,17 +5,17 @@ from __future__ import annotations
 from unittest.mock import AsyncMock, patch
 
 import pytest
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import UnitOfTemperature
-from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.fireboard.const import DOMAIN
 
-pytestmark = pytest.mark.usefixtures("auto_enable_custom_integrations")
 
-
-async def test_temperature_sensor_setup(hass, mock_coordinator_data, mock_config_entry_data):
+async def test_temperature_sensor_setup(
+    hass, mock_coordinator_data, mock_config_entry_data
+):
     """Test temperature sensor setup."""
-    config_entry = MockConfigEntry(
+    config_entry = ConfigEntry(
         domain=DOMAIN,
         title="Test",
         data=mock_config_entry_data,
@@ -51,20 +51,20 @@ async def test_temperature_sensor_setup(hass, mock_coordinator_data, mock_config
         assert len(temp_sensors) == 3  # 3 channels in mock data
 
 
-async def test_temperature_sensor_value(hass, mock_coordinator_data, mock_config_entry_data):
+async def test_temperature_sensor_value(
+    hass, mock_coordinator_data, mock_config_entry_data
+):
     """Test temperature sensor value."""
     from custom_components.fireboard.coordinator import FireBoardDataUpdateCoordinator
     from custom_components.fireboard.sensor import FireBoardTemperatureSensor
 
-    config_entry = MockConfigEntry(
+    config_entry = ConfigEntry(
         domain=DOMAIN,
         title="Test",
         data=mock_config_entry_data,
     )
 
-    with patch(
-        "custom_components.fireboard.coordinator.FireBoardApiClient"
-    ):
+    with patch("custom_components.fireboard.coordinator.FireBoardApiClient"):
         coordinator = FireBoardDataUpdateCoordinator(hass, config_entry)
         coordinator.data = mock_coordinator_data
         coordinator.last_update_success = True
@@ -89,7 +89,7 @@ async def test_temperature_sensor_unavailable(
     from custom_components.fireboard.coordinator import FireBoardDataUpdateCoordinator
     from custom_components.fireboard.sensor import FireBoardTemperatureSensor
 
-    config_entry = MockConfigEntry(
+    config_entry = ConfigEntry(
         domain=DOMAIN,
         title="Test",
         data=mock_config_entry_data,
@@ -98,9 +98,7 @@ async def test_temperature_sensor_unavailable(
     # Mark device as offline
     mock_coordinator_data["test-device-uuid-123"]["online"] = False
 
-    with patch(
-        "custom_components.fireboard.coordinator.FireBoardApiClient"
-    ):
+    with patch("custom_components.fireboard.coordinator.FireBoardApiClient"):
         coordinator = FireBoardDataUpdateCoordinator(hass, config_entry)
         coordinator.data = mock_coordinator_data
         coordinator.last_update_success = True
@@ -119,15 +117,13 @@ async def test_battery_sensor(hass, mock_coordinator_data, mock_config_entry_dat
     from custom_components.fireboard.coordinator import FireBoardDataUpdateCoordinator
     from custom_components.fireboard.sensor import FireBoardBatterySensor
 
-    config_entry = MockConfigEntry(
+    config_entry = ConfigEntry(
         domain=DOMAIN,
         title="Test",
         data=mock_config_entry_data,
     )
 
-    with patch(
-        "custom_components.fireboard.coordinator.FireBoardApiClient"
-    ):
+    with patch("custom_components.fireboard.coordinator.FireBoardApiClient"):
         coordinator = FireBoardDataUpdateCoordinator(hass, config_entry)
         coordinator.data = mock_coordinator_data
         coordinator.last_update_success = True
@@ -139,4 +135,3 @@ async def test_battery_sensor(hass, mock_coordinator_data, mock_config_entry_dat
 
         assert sensor.native_value == 85
         assert sensor.native_unit_of_measurement == "%"
-

@@ -93,7 +93,9 @@ class FireBoardApiClient:
                 data = await response.json()
 
                 # Store the authentication token for MQTT
-                self._token = data.get("key") or data.get("auth_token") or data.get("token")
+                self._token = (
+                    data.get("key") or data.get("auth_token") or data.get("token")
+                )
 
                 if not self._token:
                     raise FireBoardApiClientAuthenticationError(
@@ -167,9 +169,7 @@ class FireBoardApiClient:
                     )
 
                 if response.status == 429:
-                    raise FireBoardApiClientRateLimitError(
-                        "Rate limit exceeded"
-                    )
+                    raise FireBoardApiClientRateLimitError("Rate limit exceeded")
 
                 response.raise_for_status()
                 return await response.json()

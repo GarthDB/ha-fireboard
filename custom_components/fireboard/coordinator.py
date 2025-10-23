@@ -80,7 +80,9 @@ class FireBoardDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             _LOGGER.error("Failed to set up MQTT connection: %s", err)
             # Don't fail setup, we can fall back to polling
 
-    def _handle_mqtt_message(self, device_uuid: str, message_data: dict[str, Any]) -> None:
+    def _handle_mqtt_message(
+        self, device_uuid: str, message_data: dict[str, Any]
+    ) -> None:
         """Handle incoming MQTT message with temperature data.
 
         Args:

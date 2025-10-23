@@ -2,9 +2,41 @@
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+
+# Mock Home Assistant imports for CI testing
+try:
+    from homeassistant.core import HomeAssistant
+except ImportError:
+    # Use our mock Home Assistant module
+    import sys
+
+    from .mock_homeassistant import homeassistant, voluptuous
+
+    sys.modules["homeassistant"] = homeassistant
+    sys.modules["homeassistant.core"] = homeassistant.core
+    sys.modules["homeassistant.config_entries"] = homeassistant.config_entries
+    sys.modules["homeassistant.data_entry_flow"] = homeassistant.data_entry_flow
+    sys.modules["homeassistant.exceptions"] = homeassistant.exceptions
+    sys.modules["homeassistant.const"] = homeassistant.const
+    sys.modules["homeassistant.helpers"] = homeassistant.helpers
+    sys.modules["homeassistant.helpers.entity"] = homeassistant.helpers.entity
+    sys.modules["homeassistant.helpers.update_coordinator"] = (
+        homeassistant.helpers.update_coordinator
+    )
+    sys.modules["homeassistant.helpers.aiohttp_client"] = (
+        homeassistant.helpers.aiohttp_client
+    )
+    sys.modules["homeassistant.components.binary_sensor"] = (
+        homeassistant.components.binary_sensor
+    )
+    sys.modules["homeassistant.components.sensor"] = homeassistant.components.sensor
+    sys.modules["voluptuous"] = voluptuous
+
+    from homeassistant.core import HomeAssistant
+
 from homeassistant.const import CONF_EMAIL, CONF_PASSWORD
 
 from custom_components.fireboard.const import (
@@ -12,6 +44,38 @@ from custom_components.fireboard.const import (
     DEFAULT_POLLING_INTERVAL,
     DOMAIN,
 )
+
+
+@pytest.fixture
+async def hass() -> HomeAssistant:
+    """Return a Home Assistant instance."""
+    import asyncio
+
+    # Create a new event loop for this test
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+
+    hass_instance = HomeAssistant("")
+    hass_instance.config_entries = MagicMock()
+    hass_instance.config_entries.async_unload_platforms = AsyncMock(return_value=True)
+    hass_instance.config_entries.async_forward_entry_setups = AsyncMock(
+        return_value=None
+    )
+    hass_instance.entity_registry = MagicMock()
+    hass_instance.device_registry = MagicMock()
+
+    # Mock the config entries flow
+    hass_instance.config_entries.flow = MagicMock()
+    hass_instance.config_entries.flow.async_init = AsyncMock()
+
+    # Start the Home Assistant instance
+    await hass_instance.async_start()
+
+    yield hass_instance
+
+    # Clean up
+    await hass_instance.async_stop()
+    loop.close()
 
 
 @pytest.fixture
@@ -73,7 +137,6 @@ def mock_api_client():
     client.authenticate = AsyncMock(return_value=True)
     client.get_devices = AsyncMock(return_value=[])
     client.get_device = AsyncMock(return_value={})
-    client.get_temperatures = AsyncMock(return_value={})
     client.get_sessions = AsyncMock(return_value=[])
     return client
 
@@ -88,12 +151,3 @@ def mock_coordinator_data(mock_device_data, mock_temperature_data):
             "online": True,
         }
     }
-
-
-# Note: Don't use autouse=True as it affects simple unit tests
-# that don't need Home Assistant fixtures
-@pytest.fixture
-def auto_enable_custom_integrations(enable_custom_integrations):
-    """Enable custom integrations for Home Assistant tests."""
-    yield
-

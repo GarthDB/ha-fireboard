@@ -74,4 +74,3 @@ class FireBoardEntity(CoordinatorEntity[FireBoardDataUpdateCoordinator]):
     def _temperatures(self) -> dict[str, Any]:
         """Return temperature data for this device."""
         return self._device_data.get("temperatures", {})
-

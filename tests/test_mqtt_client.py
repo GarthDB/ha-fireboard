@@ -276,4 +276,3 @@ def test_mqtt_resubscribe_on_reconnect(mock_mqtt_client, callback_mock):
     calls = mqtt_instance.subscribe.call_args_list
     assert call("fireboard/device-1/#") in calls
     assert call("fireboard/device-2/#") in calls
-

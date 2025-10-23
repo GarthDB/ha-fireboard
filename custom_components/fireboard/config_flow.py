@@ -32,10 +32,9 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
     {
         vol.Required(CONF_EMAIL): str,
         vol.Required(CONF_PASSWORD): str,
-        vol.Optional(
-            CONF_POLLING_INTERVAL, default=DEFAULT_POLLING_INTERVAL
-        ): vol.All(
-            vol.Coerce(int), vol.Range(min=MIN_POLLING_INTERVAL, max=MAX_POLLING_INTERVAL)
+        vol.Optional(CONF_POLLING_INTERVAL, default=DEFAULT_POLLING_INTERVAL): vol.All(
+            vol.Coerce(int),
+            vol.Range(min=MIN_POLLING_INTERVAL, max=MAX_POLLING_INTERVAL),
         ),
     }
 )
@@ -89,7 +88,9 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             step_id="user", data_schema=STEP_USER_DATA_SCHEMA, errors=errors
         )
 
-    async def _test_connection(self, user_input: dict[str, Any]) -> list[dict[str, Any]]:
+    async def _test_connection(
+        self, user_input: dict[str, Any]
+    ) -> list[dict[str, Any]]:
         """Test connection to the FireBoard API.
 
         Args:
@@ -148,4 +149,3 @@ class InvalidAuth(HomeAssistantError):
 
 class RateLimitExceeded(HomeAssistantError):
     """Error to indicate rate limit was exceeded."""
-
