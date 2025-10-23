@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  homeassistant:
+    container_name: ha-fireboard-dev
+    image: ghcr.io/home-assistant/home-assistant:stable
+    volumes:
+      # Home Assistant configuration
+      - ./dev-config:/config
+      # Mount our integration directly
+      - ./custom_components/fireboard:/config/custom_components/fireboard:ro
+    environment:
+      - TZ=America/Los_Angeles
+    restart: unless-stopped
+    privileged: true
+    network_mode: host
+    # Expose Home Assistant UI
+    # ports:
+    #   - "8123:8123"  # Not needed with network_mode: host
+
+# For development, we're using host networking for simplicity
+# This allows HA to access your local network devices
+

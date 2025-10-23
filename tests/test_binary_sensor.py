@@ -5,23 +5,22 @@ from __future__ import annotations
 from unittest.mock import AsyncMock, patch
 
 import pytest
-from homeassistant.config_entries import ConfigEntry
+from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.fireboard.const import DOMAIN
 
+pytestmark = pytest.mark.usefixtures("auto_enable_custom_integrations")
 
-@pytest.mark.asyncio
+
 async def test_connectivity_sensor(hass, mock_coordinator_data, mock_config_entry_data):
     """Test connectivity sensor."""
     from custom_components.fireboard.binary_sensor import FireBoardConnectivitySensor
     from custom_components.fireboard.coordinator import FireBoardDataUpdateCoordinator
 
-    config_entry = ConfigEntry(
-        version=1,
+    config_entry = MockConfigEntry(
         domain=DOMAIN,
         title="Test",
         data=mock_config_entry_data,
-        source="user",
     )
 
     with patch(
@@ -40,7 +39,6 @@ async def test_connectivity_sensor(hass, mock_coordinator_data, mock_config_entr
         assert sensor.available is True
 
 
-@pytest.mark.asyncio
 async def test_connectivity_sensor_offline(
     hass, mock_coordinator_data, mock_config_entry_data
 ):
@@ -48,12 +46,10 @@ async def test_connectivity_sensor_offline(
     from custom_components.fireboard.binary_sensor import FireBoardConnectivitySensor
     from custom_components.fireboard.coordinator import FireBoardDataUpdateCoordinator
 
-    config_entry = ConfigEntry(
-        version=1,
+    config_entry = MockConfigEntry(
         domain=DOMAIN,
         title="Test",
         data=mock_config_entry_data,
-        source="user",
     )
 
     # Mark device as offline
@@ -75,18 +71,15 @@ async def test_connectivity_sensor_offline(
         assert sensor.available is True  # Connectivity sensor is always available
 
 
-@pytest.mark.asyncio
 async def test_battery_low_sensor(hass, mock_coordinator_data, mock_config_entry_data):
     """Test battery low sensor."""
     from custom_components.fireboard.binary_sensor import FireBoardBatteryLowSensor
     from custom_components.fireboard.coordinator import FireBoardDataUpdateCoordinator
 
-    config_entry = ConfigEntry(
-        version=1,
+    config_entry = MockConfigEntry(
         domain=DOMAIN,
         title="Test",
         data=mock_config_entry_data,
-        source="user",
     )
 
     with patch(
@@ -105,7 +98,6 @@ async def test_battery_low_sensor(hass, mock_coordinator_data, mock_config_entry
         assert sensor.is_on is False
 
 
-@pytest.mark.asyncio
 async def test_battery_low_sensor_low_battery(
     hass, mock_coordinator_data, mock_config_entry_data
 ):
@@ -113,12 +105,10 @@ async def test_battery_low_sensor_low_battery(
     from custom_components.fireboard.binary_sensor import FireBoardBatteryLowSensor
     from custom_components.fireboard.coordinator import FireBoardDataUpdateCoordinator
 
-    config_entry = ConfigEntry(
-        version=1,
+    config_entry = MockConfigEntry(
         domain=DOMAIN,
         title="Test",
         data=mock_config_entry_data,
-        source="user",
     )
 
     # Set battery to low level

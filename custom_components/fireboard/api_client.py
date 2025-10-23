@@ -1,4 +1,4 @@
-"""FireBoard API client."""
+"""FireBoard API client with session cookie support."""
 
 from __future__ import annotations
 
@@ -31,7 +31,7 @@ class FireBoardApiClientRateLimitError(FireBoardApiClientError):
 
 
 class FireBoardApiClient:
-    """FireBoard API client."""
+    """FireBoard API client with session cookie support."""
 
     def __init__(
         self,
@@ -52,9 +52,10 @@ class FireBoardApiClient:
         self._session = session
         self._token: str | None = None
         self._base_url = API_BASE_URL
+        self._cookie_jar: aiohttp.CookieJar | None = None
 
     async def authenticate(self) -> bool:
-        """Authenticate with the FireBoard API.
+        """Authenticate with the FireBoard API and capture session cookies.
 
         Returns:
             True if authentication was successful
@@ -67,10 +68,14 @@ class FireBoardApiClient:
         try:
             async with async_timeout.timeout(API_TIMEOUT):
                 response = await self._session.post(
-                    f"{self._base_url}/login",
+                    f"{self._base_url}/rest-auth/login/",
                     json={
-                        "email": self._email,
+                        "username": self._email,
                         "password": self._password,
+                    },
+                    headers={
+                        "Content-Type": "application/json",
+                        "User-Agent": "HomeAssistant-FireBoard-Integration",
                     },
                 )
 
@@ -87,13 +92,16 @@ class FireBoardApiClient:
                 response.raise_for_status()
                 data = await response.json()
 
-                # Store the authentication token
-                self._token = data.get("auth_token") or data.get("token")
+                # Store the authentication token for MQTT
+                self._token = data.get("key") or data.get("auth_token") or data.get("token")
 
                 if not self._token:
                     raise FireBoardApiClientAuthenticationError(
                         "No authentication token returned"
                     )
+
+                # Store the cookie jar for subsequent requests
+                self._cookie_jar = self._session.cookie_jar
 
                 _LOGGER.debug("Successfully authenticated with FireBoard API")
                 return True
@@ -112,8 +120,8 @@ class FireBoardApiClient:
         method: str,
         endpoint: str,
         **kwargs: Any,
-    ) -> dict[str, Any]:
-        """Make an authenticated API request.
+    ) -> dict[str, Any] | list[dict[str, Any]]:
+        """Make an authenticated API request with session cookies.
 
         Args:
             method: HTTP method (GET, POST, etc.)
@@ -121,19 +129,20 @@ class FireBoardApiClient:
             **kwargs: Additional arguments to pass to the request
 
         Returns:
-            API response as dictionary
+            API response as dictionary or list
 
         Raises:
             FireBoardApiClientAuthenticationError: If not authenticated
-            FireBoardApiClientRateLimitError: If rate limited
             FireBoardApiClientCommunicationError: If communication fails
 
         """
-        if not self._token:
+        if not self._token or not self._cookie_jar:
             raise FireBoardApiClientAuthenticationError("Not authenticated")
 
         headers = kwargs.pop("headers", {})
         headers["Authorization"] = f"Token {self._token}"
+        headers["Content-Type"] = "application/json"
+        headers["User-Agent"] = "HomeAssistant-FireBoard-Integration"
 
         try:
             async with async_timeout.timeout(API_TIMEOUT):
@@ -159,7 +168,7 @@ class FireBoardApiClient:
 
                 if response.status == 429:
                     raise FireBoardApiClientRateLimitError(
-                        "Rate limit exceeded. Please increase polling interval."
+                        "Rate limit exceeded"
                     )
 
                 response.raise_for_status()
@@ -178,13 +187,13 @@ class FireBoardApiClient:
         """Get all devices for the authenticated account.
 
         Returns:
-            List of device dictionaries
+            List of device dictionaries with channels and configuration
 
         Raises:
             FireBoardApiClientError: If request fails
 
         """
-        data = await self._request("GET", "devices")
+        data = await self._request("GET", "v1/devices.json")
         return data if isinstance(data, list) else []
 
     async def get_device(self, device_uuid: str) -> dict[str, Any]:
@@ -194,48 +203,16 @@ class FireBoardApiClient:
             device_uuid: Device UUID
 
         Returns:
-            Device dictionary
+            Device dictionary with current data
 
         Raises:
             FireBoardApiClientError: If request fails
 
         """
-        return await self._request("GET", f"devices/{device_uuid}")
+        result = await self._request("GET", f"v1/devices/{device_uuid}.json")
+        return result if isinstance(result, dict) else {}
 
-    async def get_temperatures(self, device_uuid: str) -> dict[str, Any]:
-        """Get current temperatures for a device.
-
-        Args:
-            device_uuid: Device UUID
-
-        Returns:
-            Temperature data dictionary
-
-        Raises:
-            FireBoardApiClientError: If request fails
-
-        """
-        return await self._request("GET", f"devices/{device_uuid}/temps")
-
-    async def get_sessions(
-        self, device_uuid: str | None = None
-    ) -> list[dict[str, Any]]:
-        """Get sessions for the account or a specific device.
-
-        Args:
-            device_uuid: Optional device UUID to filter sessions
-
-        Returns:
-            List of session dictionaries
-
-        Raises:
-            FireBoardApiClientError: If request fails
-
-        """
-        endpoint = "sessions"
-        if device_uuid:
-            endpoint = f"devices/{device_uuid}/sessions"
-
-        data = await self._request("GET", endpoint)
-        return data if isinstance(data, list) else []
-
+    @property
+    def auth_token(self) -> str | None:
+        """Return the authentication token for MQTT connection."""
+        return self._token

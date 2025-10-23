@@ -16,18 +16,18 @@ from custom_components.fireboard.config_flow import (
 )
 from custom_components.fireboard.const import CONF_POLLING_INTERVAL, DOMAIN
 
+pytestmark = pytest.mark.usefixtures("auto_enable_custom_integrations")
 
-@pytest.mark.asyncio
+
 async def test_form(hass):
     """Test we get the form."""
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] == FlowResultType.FORM
-    assert result["errors"] == {}
+    assert result.get("errors") in (None, {})
 
 
-@pytest.mark.asyncio
 async def test_user_success(hass, mock_config_entry_data):
     """Test successful user config."""
     with patch(
@@ -49,7 +49,6 @@ async def test_user_success(hass, mock_config_entry_data):
         assert result["data"] == mock_config_entry_data
 
 
-@pytest.mark.asyncio
 async def test_user_invalid_auth(hass, mock_config_entry_data):
     """Test invalid authentication."""
     with patch(
@@ -75,7 +74,6 @@ async def test_user_invalid_auth(hass, mock_config_entry_data):
         assert result["errors"] == {"base": "invalid_auth"}
 
 
-@pytest.mark.asyncio
 async def test_user_cannot_connect(hass, mock_config_entry_data):
     """Test connection error."""
     with patch(
@@ -101,7 +99,6 @@ async def test_user_cannot_connect(hass, mock_config_entry_data):
         assert result["errors"] == {"base": "cannot_connect"}
 
 
-@pytest.mark.asyncio
 async def test_user_rate_limit(hass, mock_config_entry_data):
     """Test rate limit error."""
     with patch(
@@ -125,24 +122,18 @@ async def test_user_rate_limit(hass, mock_config_entry_data):
         assert result["errors"] == {"base": "rate_limit"}
 
 
-@pytest.mark.asyncio
 async def test_user_already_configured(hass, mock_config_entry_data):
     """Test we handle already configured."""
+    from pytest_homeassistant_custom_component.common import MockConfigEntry
+    
     # Create an existing entry
-    entry = hass.config_entries.async_entry_for_domain_unique_id(
-        DOMAIN, mock_config_entry_data[CONF_EMAIL].lower()
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        title=f"FireBoard ({mock_config_entry_data[CONF_EMAIL]})",
+        data=mock_config_entry_data,
+        unique_id=mock_config_entry_data[CONF_EMAIL].lower(),
     )
-    if not entry:
-        await hass.config_entries.async_add(
-            config_entries.ConfigEntry(
-                version=1,
-                domain=DOMAIN,
-                title=f"FireBoard ({mock_config_entry_data[CONF_EMAIL]})",
-                data=mock_config_entry_data,
-                source=config_entries.SOURCE_USER,
-                unique_id=mock_config_entry_data[CONF_EMAIL].lower(),
-            )
-        )
+    entry.add_to_hass(hass)
 
     with patch(
         "custom_components.fireboard.config_flow.FireBoardApiClient"

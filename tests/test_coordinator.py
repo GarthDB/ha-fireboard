@@ -10,20 +10,19 @@ from homeassistant.helpers.update_coordinator import UpdateFailed
 
 from custom_components.fireboard.coordinator import FireBoardDataUpdateCoordinator
 
+pytestmark = pytest.mark.usefixtures("auto_enable_custom_integrations")
 
-@pytest.mark.asyncio
+
 async def test_coordinator_update_success(
     hass, mock_config_entry_data, mock_device_data, mock_temperature_data
 ):
     """Test successful coordinator update."""
-    from homeassistant.config_entries import ConfigEntry
+    from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-    config_entry = ConfigEntry(
-        version=1,
+    config_entry = MockConfigEntry(
         domain="fireboard",
         title="Test",
         data=mock_config_entry_data,
-        source="user",
     )
 
     with patch(
@@ -48,17 +47,14 @@ async def test_coordinator_update_success(
         assert coordinator.data[mock_device_data["uuid"]]["online"] is True
 
 
-@pytest.mark.asyncio
 async def test_coordinator_authentication(hass, mock_config_entry_data):
     """Test coordinator authenticates when token is missing."""
-    from homeassistant.config_entries import ConfigEntry
+    from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-    config_entry = ConfigEntry(
-        version=1,
+    config_entry = MockConfigEntry(
         domain="fireboard",
         title="Test",
         data=mock_config_entry_data,
-        source="user",
     )
 
     with patch(
@@ -79,7 +75,6 @@ async def test_coordinator_authentication(hass, mock_config_entry_data):
         mock_client.authenticate.assert_called_once()
 
 
-@pytest.mark.asyncio
 async def test_coordinator_rate_limit_error(hass, mock_config_entry_data):
     """Test coordinator handles rate limit errors."""
     from homeassistant.config_entries import ConfigEntry
@@ -111,7 +106,6 @@ async def test_coordinator_rate_limit_error(hass, mock_config_entry_data):
             await coordinator.async_refresh()
 
 
-@pytest.mark.asyncio
 async def test_coordinator_communication_error(hass, mock_config_entry_data):
     """Test coordinator handles communication errors."""
     from homeassistant.config_entries import ConfigEntry
@@ -145,19 +139,16 @@ async def test_coordinator_communication_error(hass, mock_config_entry_data):
             await coordinator.async_refresh()
 
 
-@pytest.mark.asyncio
 async def test_coordinator_device_offline(
     hass, mock_config_entry_data, mock_device_data, mock_temperature_data
 ):
     """Test coordinator marks device offline on temperature fetch error."""
-    from homeassistant.config_entries import ConfigEntry
+    from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-    config_entry = ConfigEntry(
-        version=1,
+    config_entry = MockConfigEntry(
         domain="fireboard",
         title="Test",
         data=mock_config_entry_data,
-        source="user",
     )
 
     with patch(

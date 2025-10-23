@@ -8,10 +8,11 @@
   "dependencies": [],
   "documentation": "https://github.com/GarthDB/ha-fireboard",
   "integration_type": "hub",
-  "iot_class": "cloud_polling",
+  "iot_class": "cloud_push",
   "issue_tracker": "https://github.com/GarthDB/ha-fireboard/issues",
   "requirements": [
-    "aiohttp>=3.8.0"
+    "aiohttp>=3.8.0",
+    "paho-mqtt>=1.6.0"
   ],
   "version": "0.1.0"
 }

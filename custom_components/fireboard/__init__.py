@@ -26,6 +26,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Create coordinator
     coordinator = FireBoardDataUpdateCoordinator(hass, entry)
 
+    # Set up MQTT connection
+    await coordinator._async_setup()
+
     # Fetch initial data
     await coordinator.async_config_entry_first_refresh()
 
@@ -40,6 +43,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
+    # Shutdown MQTT connection
+    coordinator: FireBoardDataUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]
+    await coordinator.async_shutdown()
+
     # Unload platforms
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
 

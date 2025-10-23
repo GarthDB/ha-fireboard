@@ -90,8 +90,10 @@ def mock_coordinator_data(mock_device_data, mock_temperature_data):
     }
 
 
-@pytest.fixture(autouse=True)
+# Note: Don't use autouse=True as it affects simple unit tests
+# that don't need Home Assistant fixtures
+@pytest.fixture
 def auto_enable_custom_integrations(enable_custom_integrations):
-    """Enable custom integrations in all tests."""
+    """Enable custom integrations for Home Assistant tests."""
     yield
 
