@@ -11,7 +11,7 @@ from homeassistant.components.sensor import (
     SensorStateClass,
 )
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import UnitOfTemperature
+from homeassistant.const import PERCENTAGE, UnitOfTemperature
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
@@ -62,6 +62,20 @@ async def async_setup_entry(
                     device_uuid,
                 )
             )
+
+        # Auger/drive percentage sensor. Always created, like the probe
+        # sensors: whether last_drivelog is present depends on whether
+        # Drive is actively holding a setpoint right now, not on whether
+        # the device supports Drive at all, so gating entity *creation*
+        # on it (rather than just availability/native_value) means the
+        # entity can get permanently skipped if HA happens to restart
+        # while the grill is off/idle.
+        entities.append(
+            FireBoardAugerSensor(
+                coordinator,
+                device_uuid,
+            )
+        )
 
     async_add_entities(entities)
 
@@ -206,3 +220,74 @@ class FireBoardBatterySensor(FireBoardEntity, SensorEntity):
                 return None
 
         return None
+
+
+class FireBoardAugerSensor(FireBoardEntity, SensorEntity):
+    """Representation of a FireBoard Drive auger duty-cycle sensor.
+
+    FireBoard Drive-equipped grills (e.g. Yoder/YS series) report a
+    `last_drivelog.driveper` fraction — the percentage of time the
+    auger motor is currently running to hold the setpoint. This is
+    pure REST data (device_info), unrelated to the temperatures/MQTT
+    path, so it works regardless of MQTT connectivity.
+    """
+
+    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_native_unit_of_measurement = PERCENTAGE
+    _attr_icon = "mdi:screw-lag"
+
+    def __init__(
+        self,
+        coordinator: FireBoardDataUpdateCoordinator,
+        device_uuid: str,
+    ) -> None:
+        """Initialize the auger sensor."""
+        super().__init__(coordinator, device_uuid)
+
+        self._attr_unique_id = f"{device_uuid}_auger_drive_percent"
+        self._attr_name = f"{self._device_title} Auger Drive"
+
+    def _get_drivelog(self) -> dict[str, Any]:
+        """Return the latest drivelog block from device_info."""
+        device_info = self._device_data.get("device_info", {})
+        return device_info.get("last_drivelog") or {}
+
+    @property
+    def native_value(self) -> float | None:
+        """Return the auger duty cycle as a percentage."""
+        driveper = self._get_drivelog().get("driveper")
+
+        if driveper is not None:
+            try:
+                return round(float(driveper) * 100, 1)
+            except (ValueError, TypeError):
+                _LOGGER.warning(
+                    "Invalid driveper value for %s: %s",
+                    self._attr_name,
+                    driveper,
+                )
+                return None
+
+        return None
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return additional drive state attributes."""
+        drivelog = self._get_drivelog()
+        attributes = {}
+
+        if drivelog.get("setpoint") is not None:
+            attributes["setpoint"] = drivelog.get("setpoint")
+
+        if drivelog.get("powermode") is not None:
+            attributes["power_mode"] = drivelog.get("powermode")
+
+        if drivelog.get("created") is not None:
+            attributes["updated"] = drivelog.get("created")
+
+        return attributes
+
+    # No `available` override: like the probe sensors, this stays
+    # available whenever the device itself is online (FireBoardEntity's
+    # default). Absence of an active drivelog just means native_value
+    # returns None ("unknown"), not that the entity is unavailable.
