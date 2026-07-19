@@ -63,14 +63,19 @@ async def async_setup_entry(
                 )
             )
 
-        # Auger/drive percentage sensor (FireBoard Drive-equipped grills only)
-        if device_info.get("last_drivelog") is not None:
-            entities.append(
-                FireBoardAugerSensor(
-                    coordinator,
-                    device_uuid,
-                )
+        # Auger/drive percentage sensor. Always created, like the probe
+        # sensors: whether last_drivelog is present depends on whether
+        # Drive is actively holding a setpoint right now, not on whether
+        # the device supports Drive at all, so gating entity *creation*
+        # on it (rather than just availability/native_value) means the
+        # entity can get permanently skipped if HA happens to restart
+        # while the grill is off/idle.
+        entities.append(
+            FireBoardAugerSensor(
+                coordinator,
+                device_uuid,
             )
+        )
 
     async_add_entities(entities)
 
@@ -282,7 +287,7 @@ class FireBoardAugerSensor(FireBoardEntity, SensorEntity):
 
         return attributes
 
-    @property
-    def available(self) -> bool:
-        """Return if entity is available."""
-        return super().available and bool(self._get_drivelog())
+    # No `available` override: like the probe sensors, this stays
+    # available whenever the device itself is online (FireBoardEntity's
+    # default). Absence of an active drivelog just means native_value
+    # returns None ("unknown"), not that the entity is unavailable.
