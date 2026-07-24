@@ -113,6 +113,11 @@ class FireBoardTemperatureSensor(FireBoardEntity, SensorEntity):
                         f"Channel {self._channel_number}"
                     ),
                     "channel": channel.get("channel"),
+                    "current_temp": channel.get(
+                        "current_temp",
+                        channel.get("last_templog", {}).get("temp"),
+                    ),
+                    "target_temp": channel.get("target_temp"),
                 }
                 break
 
