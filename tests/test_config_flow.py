@@ -4,18 +4,12 @@ from __future__ import annotations
 
 from unittest.mock import AsyncMock, patch
 
-import pytest
 from homeassistant import config_entries
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_EMAIL, CONF_PASSWORD
+from homeassistant.const import CONF_EMAIL
 from homeassistant.data_entry_flow import FlowResultType
 
-from custom_components.fireboard.config_flow import (
-    CannotConnect,
-    InvalidAuth,
-    RateLimitExceeded,
-)
-from custom_components.fireboard.const import CONF_POLLING_INTERVAL, DOMAIN
+from custom_components.fireboard.const import DOMAIN
 
 
 async def test_form(hass):
@@ -121,6 +115,53 @@ async def test_user_rate_limit(hass, mock_config_entry_data):
 
         assert result["type"] == FlowResultType.FORM
         assert result["errors"] == {"base": "rate_limit"}
+
+
+async def test_user_unexpected_error_during_connection_test(
+    hass, mock_config_entry_data
+):
+    """Test an unexpected error from the API client surfaces as cannot_connect.
+
+    A non-FireBoard-specific error is caught by _test_connection's broad
+    except clause.
+    """
+    with patch(
+        "custom_components.fireboard.config_flow.FireBoardApiClient"
+    ) as mock_client:
+        mock_instance = AsyncMock()
+        mock_instance.authenticate = AsyncMock(side_effect=ValueError("boom"))
+        mock_client.return_value = mock_instance
+
+        result = await hass.config_entries.flow.async_init(
+            DOMAIN,
+            context={"source": config_entries.SOURCE_USER},
+            data=mock_config_entry_data,
+        )
+
+        assert result["type"] == FlowResultType.FORM
+        assert result["errors"] == {"base": "cannot_connect"}
+
+
+async def test_user_unexpected_error_constructing_client(hass, mock_config_entry_data):
+    """Test a construction-time error is caught by async_step_user's except.
+
+    An error raised while constructing the API client itself happens outside
+    _test_connection's try block, so async_step_user's own broad except must
+    catch it instead.
+    """
+    with patch(
+        "custom_components.fireboard.config_flow.FireBoardApiClient"
+    ) as mock_client:
+        mock_client.side_effect = RuntimeError("boom")
+
+        result = await hass.config_entries.flow.async_init(
+            DOMAIN,
+            context={"source": config_entries.SOURCE_USER},
+            data=mock_config_entry_data,
+        )
+
+        assert result["type"] == FlowResultType.FORM
+        assert result["errors"] == {"base": "unknown"}
 
 
 async def test_user_already_configured(hass, mock_config_entry_data):

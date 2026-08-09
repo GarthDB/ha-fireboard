@@ -142,17 +142,6 @@ Thumbs.db
 # Home Assistant
 .homeassistant/
 
-# Development environment - exclude runtime files
-dev-config/.storage/
-dev-config/home-assistant.log*
-dev-config/home-assistant_v2.db*
-dev-config/.cloud/
-dev-config/deps/
-dev-config/tts/
-dev-config/blueprints/
-dev-config/.HA_VERSION
-dev-config/custom_components/
-
 # Security - Sensitive configuration files
 .env
 .env.local

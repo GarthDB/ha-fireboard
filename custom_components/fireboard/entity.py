@@ -50,7 +50,9 @@ class FireBoardEntity(CoordinatorEntity[FireBoardDataUpdateCoordinator]):
             name=self._device_title,
             manufacturer="FireBoard",
             model=self._device_model,
-            sw_version=device_info.get("software_version"),
+            # devices.json has no "software_version" field; "version" is the
+            # closest match (device firmware/image version, e.g. "4.2.30").
+            sw_version=device_info.get("version"),
             configuration_url="https://fireboard.io",
         )
 

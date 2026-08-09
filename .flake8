@@ -8,8 +8,7 @@ exclude =
     venv,
     build,
     dist,
-    .eggs,
-    dev-config
+    .eggs
 per-file-ignores =
     tests/mock_homeassistant.py:D107,D102,D402
     tests/__init__.py:D104

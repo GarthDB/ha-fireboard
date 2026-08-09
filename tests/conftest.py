@@ -23,6 +23,12 @@ except ImportError:
     sys.modules["homeassistant.const"] = homeassistant.const
     sys.modules["homeassistant.helpers"] = homeassistant.helpers
     sys.modules["homeassistant.helpers.entity"] = homeassistant.helpers.entity
+    sys.modules["homeassistant.helpers.device_registry"] = (
+        homeassistant.helpers.device_registry
+    )
+    sys.modules["homeassistant.helpers.entity_platform"] = (
+        homeassistant.helpers.entity_platform
+    )
     sys.modules["homeassistant.helpers.update_coordinator"] = (
         homeassistant.helpers.update_coordinator
     )
@@ -37,12 +43,17 @@ except ImportError:
 
     from homeassistant.core import HomeAssistant
 
+from homeassistant.config_entries import ConfigEntries
 from homeassistant.const import CONF_EMAIL, CONF_PASSWORD
 
+# Importing config_flow registers its ConfigFlow subclass (via
+# __init_subclass__) with the mock FlowManager, so hass.config_entries.flow
+# .async_init(DOMAIN, ...) can find it regardless of which test file runs
+# first or whether that file happens to import config_flow itself.
+import custom_components.fireboard.config_flow  # noqa: F401
 from custom_components.fireboard.const import (
     CONF_POLLING_INTERVAL,
     DEFAULT_POLLING_INTERVAL,
-    DOMAIN,
 )
 
 
@@ -56,17 +67,9 @@ async def hass() -> HomeAssistant:
     asyncio.set_event_loop(loop)
 
     hass_instance = HomeAssistant("")
-    hass_instance.config_entries = MagicMock()
-    hass_instance.config_entries.async_unload_platforms = AsyncMock(return_value=True)
-    hass_instance.config_entries.async_forward_entry_setups = AsyncMock(
-        return_value=None
-    )
+    hass_instance.config_entries = ConfigEntries(hass_instance)
     hass_instance.entity_registry = MagicMock()
     hass_instance.device_registry = MagicMock()
-
-    # Mock the config entries flow
-    hass_instance.config_entries.flow = MagicMock()
-    hass_instance.config_entries.flow.async_init = AsyncMock()
 
     # Start the Home Assistant instance
     await hass_instance.async_start()
@@ -96,9 +99,13 @@ def mock_device_data():
         "title": "Test FireBoard",
         "hardware_id": "FireBoard 2 Pro",
         "model": "FB2",
-        "software_version": "1.0.0",
-        "has_battery": True,
-        "battery_level": 85,
+        "version": "1.0.0",
+        "last_battery_reading": 0.85,  # FireBoard reports a 0.0-1.0 ratio
+        "channels": [
+            {"channel": 1, "channel_label": "Probe 1"},
+            {"channel": 2, "channel_label": "Probe 2"},
+            {"channel": 3, "channel_label": "Probe 3"},
+        ],
     }
 
 

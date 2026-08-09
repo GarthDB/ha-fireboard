@@ -77,7 +77,7 @@ Please include the following information in your report:
 ## Known Security Limitations
 
 - **Cloud API Dependency**: This integration relies on FireBoard's cloud API
-- **API Rate Limits**: FireBoard enforces rate limits (200 calls/hour)
+- **API Rate Limits**: FireBoard enforces rate limits (17 calls per 5-minute window)
 - **No Local Access**: Currently no support for local network access
 
 ## Disclosure Policy

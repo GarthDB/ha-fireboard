@@ -76,14 +76,16 @@ While there is an existing [fireboard2mqtt integration](https://github.com/gordl
    - **Password**: Your FireBoard account password
    - **Polling Interval**: How often to update data (default: 40 seconds)
 
-**Note**: The minimum polling interval is 40 seconds to respect FireBoard's API rate limit of 200 calls per hour.
+**Note**: The minimum polling interval is 40 seconds to respect FireBoard's API rate limit of 17 calls per 5-minute window.
 
 ## Entities
 
 ### Temperature Sensors
 - One sensor per temperature channel (typically 6 per device)
 - Device class: `temperature`
-- Unit: Fahrenheit (°F)
+- Unit: Celsius or Fahrenheit, matching whatever your FireBoard account is
+  configured for (read per-reading from FireBoard's `degreetype` field, not
+  assumed)
 - Attributes:
   - `channel`: Channel number (1-6)
   - `label`: Custom channel label from FireBoard app
@@ -94,9 +96,24 @@ While there is an existing [fireboard2mqtt integration](https://github.com/gordl
 - Device class: `battery`
 - Unit: Percent (%)
 
+### FireBoard Drive Sensors
+- Only created for devices with a FireBoard Drive (fan controller) attached
+- **Drive Setpoint**: Target temperature, device class `temperature`, unit Celsius or Fahrenheit matching your account's configured unit
+- **Drive Fan**: Fan output percentage, unit %
+- **Drive Mode**: `Auto`, `Manual`, or `Off`, read directly from FireBoard's own labels (not guessed) — refreshed on the same slower cadence as session data
+- **Drive Battery Voltage**: The Drive unit's own battery voltage (separate from the main device's battery), unit V
+
+> **Note**: FireBoard's API is read-only — there is no way to *set* the Drive setpoint, mode, or any other value through this integration (or through FireBoard's documented API at all). Changes must be made in the FireBoard app.
+
+### Session Sensor
+- One per device, showing the title of the current or most recently ended cook session (`"No Session"` if none exists yet)
+- Attributes: `session_id`, `start_time`, `end_time`, `duration`, `active`, `description`
+- Refreshed on a slower cadence than temperature data (every 3rd poll) to conserve API rate limit budget
+
 ### Binary Sensors
 - **Connectivity**: Device online/offline status
 - **Battery Low**: Alert when battery below 20%
+- **Drive Lid Paused**: On when FireBoard Drive has paused its fan because it detected the lid open (Drive-equipped devices only)
 
 ## Dashboard Examples
 
@@ -234,8 +251,8 @@ automation:
 
 **Solution**:
 - Increase the polling interval in the integration configuration
-- Default is 40 seconds (90 calls/hour)
-- FireBoard allows 200 API calls per hour
+- Default is 40 seconds
+- FireBoard allows 17 API calls per 5-minute window
 - If you have multiple Home Assistant instances, they share the same limit
 
 ### Devices Not Showing Up
@@ -287,7 +304,7 @@ git clone https://github.com/GarthDB/ha-fireboard.git
 cd ha-fireboard
 
 # Install development dependencies
-pip install -r requirements-dev.txt
+pip install -e ".[dev]"
 
 # Run tests
 pytest tests/ --cov=custom_components/fireboard
@@ -296,9 +313,6 @@ pytest tests/ --cov=custom_components/fireboard
 black custom_components/fireboard tests/
 isort custom_components/fireboard tests/
 flake8 custom_components/fireboard tests/
-
-# Run all checks
-make check-all  # If using Makefile
 ```
 
 ### Project Structure
@@ -318,8 +332,7 @@ ha-fireboard/
 │       ├── manifest.json        # Integration metadata
 │       └── strings.json         # UI strings
 ├── tests/                       # Test suite
-├── .github/workflows/           # CI/CD
-└── docs/                        # Documentation
+└── .github/workflows/           # CI/CD
 ```
 
 ## Contributing
@@ -334,8 +347,8 @@ ha-fireboard/
 
 ## Support
 
-- **Issues**: [GitHub Issues](https://github.com/garthdb/ha-fireboard/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/garthdb/ha-fireboard/discussions)
+- **Issues**: [GitHub Issues](https://github.com/GarthDB/ha-fireboard/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/GarthDB/ha-fireboard/discussions)
 - **Home Assistant Community**: [Community Forum](https://community.home-assistant.io/)
 
 ## License

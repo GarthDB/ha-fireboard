@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Any, Dict
+from typing import Any, Callable, Dict
 from unittest.mock import MagicMock
 
 
@@ -76,6 +76,10 @@ class HomeAssistant:
         """Mock async_stop."""
         pass
 
+    async def async_add_executor_job(self, func, *args):
+        """Mock async_add_executor_job: run synchronously in-line."""
+        return func(*args)
+
 
 class ConfigEntry:
     """Mock ConfigEntry class."""
@@ -96,16 +100,47 @@ class ConfigEntry:
         pass
 
 
+# Alias matching pytest-homeassistant-custom-component's MockConfigEntry,
+# which the real test suite would otherwise provide.
+MockConfigEntry = ConfigEntry
+
+
+class AbortFlow(Exception):
+    """Mock AbortFlow exception, mirroring data_entry_flow.AbortFlow."""
+
+    def __init__(self, reason: str):
+        self.reason = reason
+        super().__init__(reason)
+
+
 class ConfigFlow:
     """Mock ConfigFlow class."""
 
+    _flow_classes: Dict[str, type] = {}
+
     def __init__(self, *args, **kwargs):
-        pass
+        self.hass = None
+        self.context: dict = {}
+        self.unique_id: str | None = None
 
     def __init_subclass__(cls, domain=None, **kwargs):
         """Mock __init_subclass__ to handle domain parameter."""
         cls.domain = domain
+        if domain:
+            ConfigFlow._flow_classes[domain] = cls
         super().__init_subclass__(**kwargs)
+
+    async def async_set_unique_id(self, unique_id):
+        """Mock async_set_unique_id method."""
+        self.unique_id = unique_id
+
+    def _abort_if_unique_id_configured(self):
+        """Mock _abort_if_unique_id_configured method."""
+        if self.unique_id is None or self.hass is None:
+            return
+        for entry in self.hass.config_entries.async_entries(self.domain):
+            if entry.unique_id == self.unique_id:
+                raise AbortFlow("already_configured")
 
     def async_show_form(self, step_id, data_schema=None, errors=None):
         """Mock async_show_form method."""
@@ -125,6 +160,49 @@ class ConfigFlow:
         return FlowResult("test_flow", FlowResultType.ABORT, {"reason": reason})
 
 
+class FlowManager:
+    """Mock flow manager backing hass.config_entries.flow."""
+
+    def __init__(self, hass: "HomeAssistant"):
+        self._hass = hass
+
+    async def async_init(self, domain, context=None, data=None):
+        """Instantiate the registered ConfigFlow for domain and run the user step."""
+        flow_class = ConfigFlow._flow_classes[domain]
+        flow = flow_class()
+        flow.hass = self._hass
+        flow.context = context or {}
+        try:
+            return await flow.async_step_user(data)
+        except AbortFlow as err:
+            return flow.async_abort(err.reason)
+
+
+class ConfigEntries:
+    """Mock config entries manager backing hass.config_entries."""
+
+    def __init__(self, hass: "HomeAssistant"):
+        self._hass = hass
+        self._entries: list[ConfigEntry] = []
+        self.flow = FlowManager(hass)
+
+    def async_entries(self, domain=None):
+        """Mock async_entries method."""
+        if domain is None:
+            return list(self._entries)
+        return [entry for entry in self._entries if entry.domain == domain]
+
+    async def async_forward_entry_setups(self, entry, platforms):
+        """Mock async_forward_entry_setups method."""
+
+    async def async_unload_platforms(self, entry, platforms):
+        """Mock async_unload_platforms method."""
+        return True
+
+
+SOURCE_USER = "user"
+
+
 class DeviceInfo:
     """Mock DeviceInfo class."""
 
@@ -137,25 +215,64 @@ class DeviceInfo:
 
 
 class DataUpdateCoordinator:
-    """Mock DataUpdateCoordinator class."""
+    """Mock DataUpdateCoordinator class.
+
+    Mirrors the real refresh semantics subclasses rely on: _async_setup runs
+    once, _async_update_data populates data, and UpdateFailed is swallowed
+    into last_update_success rather than propagated (matching
+    homeassistant.helpers.update_coordinator).
+    """
 
     def __init__(self, hass: HomeAssistant, logger=None, **kwargs):
         self.hass = hass
         self.logger = logger
-        self.data = {}
+        self.data = None
         self.last_update_success = True
+        self.last_exception: Exception | None = None
+        self._setup_done = False
+
+    async def _async_setup(self) -> None:
+        """Overridden by subclasses; no-op by default."""
+
+    async def _async_update_data(self):
+        """Overridden by subclasses."""
+        raise NotImplementedError
+
+    async def _ensure_setup(self):
+        if not self._setup_done:
+            await self._async_setup()
+            self._setup_done = True
+
+    async def async_refresh(self):
+        """Mock async_refresh, matching real HA: failures don't raise."""
+        await self._ensure_setup()
+        try:
+            self.data = await self._async_update_data()
+            self.last_update_success = True
+            self.last_exception = None
+        except UpdateFailed as err:
+            self.last_exception = err
+            self.last_update_success = False
+        return self.data
 
     async def async_config_entry_first_refresh(self):
         """Mock async_config_entry_first_refresh."""
-        pass
+        await self.async_refresh()
+        if not self.last_update_success:
+            raise ConfigEntryNotReady from self.last_exception
 
     async def async_request_refresh(self):
         """Mock async_request_refresh."""
-        pass
+        await self.async_refresh()
 
-    def __class_getitem__(self, item):
+    def async_set_updated_data(self, data):
+        """Mock async_set_updated_data."""
+        self.data = data
+        self.last_update_success = True
+
+    def __class_getitem__(cls, item):
         """Support generic type parameters."""
-        return self
+        return cls
 
 
 class UpdateFailed(Exception):
@@ -185,7 +302,10 @@ class BinarySensorEntity:
 class SensorEntity:
     """Mock SensorEntity class."""
 
-    pass
+    @property
+    def native_unit_of_measurement(self):
+        """Return _attr_native_unit_of_measurement, mirroring real HA."""
+        return getattr(self, "_attr_native_unit_of_measurement", None)
 
 
 class CoordinatorEntity:
@@ -203,6 +323,10 @@ class CoordinatorEntity:
     @property
     def name(self):
         return self._attr_name
+
+    def __class_getitem__(cls, item):
+        """Support generic type parameters, e.g. CoordinatorEntity[Foo]."""
+        return cls
 
 
 class Entity:
@@ -226,6 +350,12 @@ class UnitOfTemperature:
     CELSIUS = "°C"
 
 
+class UnitOfElectricPotential:
+    """Mock UnitOfElectricPotential enum."""
+
+    VOLT = "V"
+
+
 class BinarySensorDeviceClass:
     """Mock BinarySensorDeviceClass enum."""
 
@@ -238,6 +368,7 @@ class SensorDeviceClass:
 
     TEMPERATURE = "temperature"
     BATTERY = "battery"
+    VOLTAGE = "voltage"
 
 
 class SensorStateClass:
@@ -276,8 +407,15 @@ class MockVoluptuous:
 # Mock the homeassistant module structure
 homeassistant = MockModule(
     core=MockModule(HomeAssistant=HomeAssistant),
-    config_entries=MockModule(ConfigEntry=ConfigEntry, ConfigFlow=ConfigFlow),
-    data_entry_flow=MockModule(FlowResultType=FlowResultType, FlowResult=FlowResult),
+    config_entries=MockModule(
+        ConfigEntry=ConfigEntry,
+        ConfigFlow=ConfigFlow,
+        ConfigEntries=ConfigEntries,
+        SOURCE_USER=SOURCE_USER,
+    ),
+    data_entry_flow=MockModule(
+        FlowResultType=FlowResultType, FlowResult=FlowResult, AbortFlow=AbortFlow
+    ),
     exceptions=MockModule(
         HomeAssistantError=HomeAssistantError,
         ConfigEntryNotReady=ConfigEntryNotReady,
@@ -285,6 +423,7 @@ homeassistant = MockModule(
     const=MockModule(
         Platform=Platform,
         UnitOfTemperature=UnitOfTemperature,
+        UnitOfElectricPotential=UnitOfElectricPotential,
         CONF_EMAIL=CONF_EMAIL,
         CONF_PASSWORD=CONF_PASSWORD,
     ),
@@ -292,6 +431,12 @@ homeassistant = MockModule(
         entity=MockModule(
             DeviceInfo=DeviceInfo,
             Entity=Entity,
+        ),
+        device_registry=MockModule(
+            DeviceInfo=DeviceInfo,
+        ),
+        entity_platform=MockModule(
+            AddEntitiesCallback=Callable,
         ),
         update_coordinator=MockModule(
             DataUpdateCoordinator=DataUpdateCoordinator,

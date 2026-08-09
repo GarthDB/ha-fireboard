@@ -8,7 +8,10 @@ DOMAIN: Final = "fireboard"
 # API Configuration
 API_BASE_URL: Final = "https://fireboard.io/api/v1"
 API_TIMEOUT: Final = 30
-API_RATE_LIMIT: Final = 200  # calls per hour
+
+# Per https://docs.fireboard.io/app/app-api/: max 17 calls per 5-minute window
+API_RATE_LIMIT_MAX_CALLS: Final = 17
+API_RATE_LIMIT_WINDOW_SECONDS: Final = 300
 
 # Configuration keys
 CONF_EMAIL: Final = "email"

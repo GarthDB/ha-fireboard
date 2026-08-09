@@ -4,12 +4,18 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import time
+from collections import deque
 from typing import Any
 
 import aiohttp
-import async_timeout
 
-from .const import API_BASE_URL, API_TIMEOUT
+from .const import (
+    API_BASE_URL,
+    API_RATE_LIMIT_MAX_CALLS,
+    API_RATE_LIMIT_WINDOW_SECONDS,
+    API_TIMEOUT,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -54,6 +60,38 @@ class FireBoardApiClient:
         self._base_url = API_BASE_URL
         self._cookie_jar: aiohttp.CookieJar | None = None
         self._csrf_token: str | None = None
+        self._call_timestamps: deque[float] = deque()
+
+    def _enforce_rate_limit(self) -> None:
+        """Guard against exceeding FireBoard's documented API rate limit.
+
+        FireBoard allows at most API_RATE_LIMIT_MAX_CALLS calls within any
+        API_RATE_LIMIT_WINDOW_SECONDS window and locks out clients that
+        exceed it, so we track our own call history and refuse to make a
+        request that would push us over the limit rather than relying on
+        the server to reject it.
+
+        Raises:
+            FireBoardApiClientRateLimitError: If making another call now
+                would exceed the documented rate limit.
+
+        """
+        now = time.monotonic()
+        window_start = now - API_RATE_LIMIT_WINDOW_SECONDS
+
+        while self._call_timestamps and self._call_timestamps[0] < window_start:
+            self._call_timestamps.popleft()
+
+        if len(self._call_timestamps) >= API_RATE_LIMIT_MAX_CALLS:
+            retry_after = self._call_timestamps[0] + API_RATE_LIMIT_WINDOW_SECONDS - now
+            raise FireBoardApiClientRateLimitError(
+                "Local rate limit reached "
+                f"({API_RATE_LIMIT_MAX_CALLS} calls per "
+                f"{API_RATE_LIMIT_WINDOW_SECONDS}s); "
+                f"retry in {retry_after:.0f}s"
+            )
+
+        self._call_timestamps.append(now)
 
     async def authenticate(self) -> bool:
         """Authenticate with the FireBoard API and capture session cookies.
@@ -66,8 +104,9 @@ class FireBoardApiClient:
             FireBoardApiClientCommunicationError: If communication fails
 
         """
+        self._enforce_rate_limit()
         try:
-            async with async_timeout.timeout(API_TIMEOUT):
+            async with asyncio.timeout(API_TIMEOUT):
                 # Auth endpoint is at /api/rest-auth/login/ (not /api/v1/)
                 auth_url = self._base_url.replace("/v1", "") + "/rest-auth/login/"
                 response = await self._session.post(
@@ -116,14 +155,13 @@ class FireBoardApiClient:
 
                 # Debug: Check what cookies we have
                 cookies = [
-                    f"{cookie.key}={cookie.value}"
-                    for cookie in self._cookie_jar
+                    f"{cookie.key}={cookie.value}" for cookie in self._cookie_jar
                 ]
                 _LOGGER.debug(
                     "Successfully authenticated with FireBoard API. "
                     "Cookies: %s, CSRF: %s",
                     ", ".join(cookies) if cookies else "None",
-                    self._csrf_token
+                    self._csrf_token,
                 )
                 return True
 
@@ -171,14 +209,15 @@ class FireBoardApiClient:
         if self._csrf_token:
             headers["X-CSRFToken"] = self._csrf_token
 
+        self._enforce_rate_limit()
         try:
-            async with async_timeout.timeout(API_TIMEOUT):
+            async with asyncio.timeout(API_TIMEOUT):
                 url = f"{self._base_url}/{endpoint}"
                 _LOGGER.debug(
                     "Making %s request to %s with %d cookies",
                     method,
                     url,
-                    len(list(self._cookie_jar))
+                    len(list(self._cookie_jar)),
                 )
                 response = await self._session.request(
                     method,
@@ -195,6 +234,7 @@ class FireBoardApiClient:
                     headers["Authorization"] = f"Token {self._token}"
                     if self._csrf_token:
                         headers["X-CSRFToken"] = self._csrf_token
+                    self._enforce_rate_limit()
                     response = await self._session.request(
                         method,
                         url,
@@ -244,6 +284,43 @@ class FireBoardApiClient:
 
         """
         result = await self._request("GET", f"devices/{device_uuid}.json")
+        return result if isinstance(result, dict) else {}
+
+    async def get_sessions(self) -> list[dict[str, Any]]:
+        """Get all cook sessions for the authenticated account.
+
+        Returns:
+            List of session dictionaries, each including a "device_ids" list
+            linking it to the devices it was recorded on. An ongoing session
+            has "end_time" set to None.
+
+        Raises:
+            FireBoardApiClientError: If request fails
+
+        """
+        data = await self._request("GET", "sessions.json")
+        return data if isinstance(data, list) else []
+
+    async def get_session(self, session_id: int) -> dict[str, Any]:
+        """Get detail for a single cook session.
+
+        Unlike get_sessions(), this embeds each tied device's full current
+        state, including a "last_drivelog" with human-readable "modetype"/
+        "powermode" strings (sessions.json's device_ids-only entries and
+        devices.json's embedded last_drivelog report these as raw,
+        undocumented integers instead).
+
+        Args:
+            session_id: Session ID
+
+        Returns:
+            Session dictionary with an embedded "devices" list
+
+        Raises:
+            FireBoardApiClientError: If request fails
+
+        """
+        result = await self._request("GET", f"sessions/{session_id}.json")
         return result if isinstance(result, dict) else {}
 
     @property

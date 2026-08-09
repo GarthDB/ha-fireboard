@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
-import pytest
 from homeassistant.config_entries import ConfigEntry
 
 from custom_components.fireboard.const import DOMAIN
@@ -25,14 +24,15 @@ async def test_setup_entry(hass, mock_config_entry_data, mock_coordinator_data):
         mock_client.authenticate = AsyncMock(return_value=True)
         mock_client.get_devices = AsyncMock(return_value=[])
         mock_client.auth_token = "test-token"
+        mock_client.session_cookies = {"sessionid": "test-session"}
         mock_client_class.return_value = mock_client
 
         with patch(
-            "custom_components.fireboard.mqtt_client.FireBoardMQTTClient"
+            "custom_components.fireboard.coordinator.FireBoardMQTTClient"
         ) as mock_mqtt:
-            mock_mqtt_instance = AsyncMock()
-            mock_mqtt_instance.connect = AsyncMock(return_value=True)
-            mock_mqtt.return_value = mock_mqtt_instance
+            # FireBoardMQTTClient's methods are synchronous and run via
+            # hass.async_add_executor_job, so use MagicMock (not AsyncMock).
+            mock_mqtt.return_value = MagicMock()
 
             from custom_components.fireboard import async_setup_entry
 
@@ -45,7 +45,7 @@ async def test_setup_entry(hass, mock_config_entry_data, mock_coordinator_data):
 
 async def test_unload_entry(hass, mock_config_entry_data, mock_coordinator_data):
     """Test unloading a config entry."""
-    config_entry = MockConfigEntry(
+    config_entry = ConfigEntry(
         domain=DOMAIN,
         title="Test",
         data=mock_config_entry_data,

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ha-fireboard"
-version = "0.1.0"
+version = "0.3.0"
 description = "Home Assistant integration for FireBoard wireless thermometers"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -25,22 +25,34 @@ classifiers = [
     "Topic :: Home Automation",
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
+dependencies = [
+    "aiohttp>=3.8.0",
+    "paho-mqtt>=1.6.0",
+]
 
 [project.urls]
-Homepage = "https://github.com/garthdb/ha-fireboard"
-Repository = "https://github.com/garthdb/ha-fireboard.git"
-Issues = "https://github.com/garthdb/ha-fireboard/issues"
-Documentation = "https://github.com/garthdb/ha-fireboard#readme"
+Homepage = "https://github.com/GarthDB/ha-fireboard"
+Repository = "https://github.com/GarthDB/ha-fireboard.git"
+Issues = "https://github.com/GarthDB/ha-fireboard/issues"
+Documentation = "https://github.com/GarthDB/ha-fireboard#readme"
 
 [project.optional-dependencies]
 dev = [
     "pytest>=7.0.0",
     "pytest-asyncio>=0.21.0",
     "pytest-cov>=4.0.0",
+    "pytest-mock>=3.10.0",
     "black>=22.0.0",
     "isort>=5.10.0",
     "flake8>=5.0.0",
+    "flake8-docstrings>=1.7.0",
+    "flake8-bugbear>=23.0.0",
+    "flake8-comprehensions>=3.14.0",
+    "flake8-simplify>=0.19.0",
     "mypy>=1.0.0",
+    "bandit>=1.7.0",
+    "safety>=2.3.0",
+    "vulture>=2.7.0",
     "pre-commit>=2.20.0",
 ]
 
@@ -103,6 +115,8 @@ asyncio_default_fixture_loop_scope = "function"
 addopts = [
     "--strict-markers",
     "--strict-config",
+    "-m",
+    "not api",
     "--cov=custom_components.fireboard",
     "--cov-report=term-missing",
     "--cov-report=html",
